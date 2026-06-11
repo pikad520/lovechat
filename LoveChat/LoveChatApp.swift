@@ -25,6 +25,10 @@ struct LoveChatApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+        .commands {
+            // 隐藏应用菜单中的「服务」子菜单
+            CommandGroup(replacing: .systemServices) {}
+        }
 
         Settings {
             SettingsView()
