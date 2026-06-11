@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -sL https://raw.githubusercontent.com/github/spec-kit/main/README.md -o speckit-readme.md)",
+      "Bash(grep -nE '^#{1,3} ' speckit-readme.md)",
+      "Bash(curl -sL \"https://api.github.com/repos/github/spec-kit/releases/latest\")",
+      "Bash(uv --version)",
+      "Bash(uv tool *)",
+      "Bash(git:*)",
+      "Bash(sips:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}
