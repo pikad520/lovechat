@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode 用户态文件（个人窗口布局、断点等，不应入库）
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# Xcode 构建产物
+build/
+DerivedData/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager（本项目零依赖，防御性忽略）
+.build/
+.swiftpm/
+
+# 临时文件
+*.swp
+*~.nib
