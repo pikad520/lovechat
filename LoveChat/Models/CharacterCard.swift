@@ -1,6 +1,21 @@
 import Foundation
 import SwiftData
 
+/// 图片生成预置风格（FR-202）：仅三选一，提示词片段硬编码于 PromptLibrary
+enum ImageStyle: String, Codable, CaseIterable, Sendable {
+    case realistic3D
+    case anime3D
+    case anime2D
+
+    var displayName: String {
+        switch self {
+        case .realistic3D: "3D写实"
+        case .anime3D: "3D日漫"
+        case .anime2D: "2D日漫"
+        }
+    }
+}
+
 @Model
 final class CharacterCard {
     @Attribute(.unique) var id: UUID
@@ -15,7 +30,14 @@ final class CharacterCard {
     var allowImages: Bool
     /// ImageStore 中的头像文件名（FR-101）；nil 时 UI 显示占位
     var avatarFileName: String?
+    /// 图片生成风格（FR-202）；声明默认值保证旧数据轻量迁移
+    var imageStyleRaw: String = ImageStyle.realistic3D.rawValue
     var createdAt: Date
+
+    var imageStyle: ImageStyle {
+        get { ImageStyle(rawValue: imageStyleRaw) ?? .realistic3D }
+        set { imageStyleRaw = newValue.rawValue }
+    }
 
     init(
         id: UUID = UUID(),
@@ -55,6 +77,7 @@ struct CharacterSnapshot: Sendable {
     var extraNotes: String
     var showInnerThoughts: Bool
     var allowImages: Bool
+    var imageStyle: ImageStyle
 
     init(_ card: CharacterCard) {
         name = card.name
@@ -66,5 +89,6 @@ struct CharacterSnapshot: Sendable {
         extraNotes = card.extraNotes
         showInnerThoughts = card.showInnerThoughts
         allowImages = card.allowImages
+        imageStyle = card.imageStyle
     }
 }

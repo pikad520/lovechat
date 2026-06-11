@@ -46,6 +46,19 @@ struct CharacterEditView: View {
                         TextEditor(text: $character.extraNotes).frame(minHeight: 48)
                     }
                 }
+                if !imagineProviders.isEmpty {
+                    Section("图片生成风格") {
+                        Picker("预置风格", selection: $character.imageStyle) {
+                            ForEach(ImageStyle.allCases, id: \.self) { style in
+                                Text(style.displayName).tag(style)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        Text("同时作用于头像生成与对话中的情境生图。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 Section("开关") {
                     Toggle("展示心理活动", isOn: $character.showInnerThoughts)
                     Text("开启后角色会用（小括号）穿插心理活动，以特殊样式展示。")
@@ -149,7 +162,7 @@ struct CharacterEditView: View {
         isGeneratingAvatar = true
         avatarError = nil
         let snapshot = ImagineProviderSnapshot(provider)
-        let prompt = PromptLibrary.avatarPrompt(appearance: character.appearance)
+        let prompt = PromptLibrary.avatarPrompt(appearance: character.appearance, style: character.imageStyle)
         Task {
             do {
                 let fileName = try await ImageGenService.generate(prompt: prompt, provider: snapshot)

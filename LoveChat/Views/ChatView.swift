@@ -70,6 +70,12 @@ struct ChatView: View {
                 }
                 .padding()
             }
+            .defaultScrollAnchor(.bottom) // 打开对话即定位最新消息（FR-201）
+            .onAppear {
+                if let lastID = sortedMessages.last?.id {
+                    proxy.scrollTo(lastID, anchor: .bottom)
+                }
+            }
             .onChange(of: sortedMessages.last?.text) {
                 if let lastID = sortedMessages.last?.id {
                     proxy.scrollTo(lastID, anchor: .bottom)

@@ -88,6 +88,7 @@ final class ChatSessionViewModel {
                 provider: provider,
                 imagineProvider: imagineProvider,
                 appearance: character.appearance,
+                style: character.imageStyle,
                 replyID: reply.id,
                 conversation: conversation
             )
@@ -206,6 +207,7 @@ final class ChatSessionViewModel {
         provider: ChatProviderSnapshot,
         imagineProvider: ImagineProviderSnapshot,
         appearance: String,
+        style: ImageStyle,
         replyID: UUID,
         conversation: Conversation
     ) {
@@ -213,7 +215,7 @@ final class ChatSessionViewModel {
             let decision = await ChatService.decideImage(recentTurns: turns, provider: provider)
             guard decision.generate, !decision.prompt.isEmpty else { return }
             guard self != nil else { return }
-            let prompt = PromptLibrary.imagePrompt(appearance: appearance, scenePrompt: decision.prompt)
+            let prompt = PromptLibrary.imagePrompt(appearance: appearance, scenePrompt: decision.prompt, style: style)
             do {
                 let fileName = try await ImageGenService.generate(prompt: prompt, provider: imagineProvider)
                 if let reply = conversation.sortedMessages.first(where: { $0.id == replyID }) {

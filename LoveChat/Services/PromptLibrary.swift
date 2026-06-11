@@ -31,23 +31,41 @@ enum PromptLibrary {
         """
     }
 
+    // MARK: - 图片风格片段（FR-203，硬编码，宪法 VI）
+
+    static func styleFragment(for style: ImageStyle) -> String {
+        switch style {
+        case .realistic3D:
+            "Photorealistic 3D render, lifelike skin and fabric textures, "
+                + "physically based lighting, cinematic depth of field."
+        case .anime3D:
+            "3D anime style render, cel-shaded stylized 3D character, "
+                + "clean smooth surfaces, vibrant anime-inspired colors."
+        case .anime2D:
+            "2D Japanese anime illustration, clean line art, cel shading, "
+                + "flat vivid colors, detailed anime key visual style."
+        }
+    }
+
     // MARK: - P3 生图提示词模板
 
-    static func imagePrompt(appearance: String, scenePrompt: String) -> String {
+    static func imagePrompt(appearance: String, scenePrompt: String, style: ImageStyle) -> String {
         var parts: [String] = []
         if !appearance.isEmpty {
             parts.append("Character appearance: \(appearance).")
         }
         parts.append("Scene: \(scenePrompt).")
+        parts.append(styleFragment(for: style))
         parts.append("High quality, detailed, soft lighting, single character portrait composition.")
         return parts.joined(separator: " ")
     }
 
     // MARK: - P5 头像生成提示词
 
-    static func avatarPrompt(appearance: String) -> String {
+    static func avatarPrompt(appearance: String, style: ImageStyle) -> String {
         "Character appearance: \(appearance). Portrait avatar, head and shoulders, "
-            + "facing viewer, high quality, detailed, soft lighting, clean background."
+            + "facing viewer, high quality, detailed, soft lighting, clean background. "
+            + styleFragment(for: style)
     }
 
     // MARK: - 旁白合并（FR-105，标记格式硬编码）
