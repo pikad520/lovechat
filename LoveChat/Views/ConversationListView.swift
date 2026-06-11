@@ -35,6 +35,21 @@ struct ConversationListView: View {
                 selection = conversation
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            // 左下角设置入口，兼容 Windows 用户操作习惯（FR-301）
+            HStack {
+                SettingsLink {
+                    Label("设置", systemImage: "gearshape")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("打开设置（⌘,）")
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.bar)
+        }
         .overlay {
             if conversations.isEmpty {
                 ContentUnavailableView(
