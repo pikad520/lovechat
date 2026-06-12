@@ -41,6 +41,9 @@ final class ChatSessionViewModel {
                 ImageStore.delete(fileName)
             }
             context.delete(last)
+            // 立即落盘：否则被删消息在保存前仍留在关系数组中，
+            // 会被带进上下文导致模型面对悬空对话自由发挥
+            try? context.save()
         }
         startReply(in: conversation, context: context)
     }
@@ -142,7 +145,8 @@ final class ChatSessionViewModel {
     /// 取最近 memoryTurns 轮、未被截断排除的 user/assistant 消息
     private func contextTurns(in conversation: Conversation) -> [ChatTurn] {
         let eligible = conversation.sortedMessages.filter {
-            !$0.excludedFromContext
+            !$0.isDeleted
+                && !$0.excludedFromContext
                 && ($0.role == .user || $0.role == .assistant)
                 && ($0.role == .user || $0.status == .complete || $0.status == .stopped)
                 && !$0.text.isEmpty
@@ -154,7 +158,12 @@ final class ChatSessionViewModel {
             window.append(message)
             if turnCount >= conversation.memoryTurns { break }
         }
-        return window.reversed().map(Self.makeTurn)
+        var turns = Array(window.reversed().map(Self.makeTurn))
+        // 上下文必须以用户消息收尾：以 assistant 结尾的悬空对话会让模型自由发挥
+        while let last = turns.last, last.role == "assistant" {
+            turns.removeLast()
+        }
+        return turns
     }
 
     /// 消息 → ChatTurn：用户消息携带旁白时合并标记（FR-105）
