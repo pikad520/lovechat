@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 /// 语音设置（FR-402/405/406）：开关 + 模型一键下载 + 音色/语速 + 删除
 struct VoiceSettingsView: View {
@@ -69,16 +71,23 @@ struct VoiceSettingsView: View {
     private var modelStatusRow: some View {
         switch manager.state {
         case .notInstalled:
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Label("语音模型未安装", systemImage: "arrow.down.circle")
-                    Text("约 \(VoiceModelManager.approximateSizeMB)MB，下载一次永久可用（来源：sherpa-onnx 官方发布）")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 8) {
+                Label("语音模型未安装", systemImage: "arrow.down.circle")
+                Text("约 \(VoiceModelManager.approximateSizeMB)MB，下载一次永久可用（来源：sherpa-onnx 官方发布）")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("下载（加速镜像）") { manager.startDownload(useMirror: true) }
+                        .buttonStyle(.borderedProminent)
+                        .help("通过 GitHub 反代镜像下载，中国大陆网络推荐")
+                    Button("下载（官方源）") { manager.startDownload() }
+                    Button("导入本地模型包…") { importArchive() }
+                        .help("已自行下载 kokoro-multi-lang-v1_1.tar.bz2 时使用")
                 }
-                Spacer()
-                Button("下载语音模型") { manager.startDownload() }
-                    .buttonStyle(.borderedProminent)
+                Text("下载慢？可用浏览器/下载工具自行下载后点「导入本地模型包」：\n\(VoiceModelManager.modelURL.absoluteString)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .textSelection(.enabled)
             }
         case .downloading(let progress):
             HStack {
@@ -110,13 +119,26 @@ struct VoiceSettingsView: View {
                 }
             }
         case .failed(let reason):
-            HStack {
+            VStack(alignment: .leading, spacing: 8) {
                 Label(reason, systemImage: "xmark.circle.fill")
                     .foregroundStyle(.red)
                     .lineLimit(2)
-                Spacer()
-                Button("重试") { manager.startDownload() }
+                HStack {
+                    Button("重试（加速镜像）") { manager.startDownload(useMirror: true) }
+                    Button("重试（官方源）") { manager.startDownload() }
+                    Button("导入本地模型包…") { importArchive() }
+                }
             }
+        }
+    }
+
+    private func importArchive() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [UTType(filenameExtension: "bz2") ?? .archive, .archive]
+        panel.allowsMultipleSelection = false
+        panel.message = "选择已下载的 kokoro-multi-lang-v1_1.tar.bz2"
+        if panel.runModal() == .OK, let url = panel.url {
+            manager.importArchive(at: url)
         }
     }
 }

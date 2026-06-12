@@ -21,6 +21,8 @@ final class VoiceModelManager {
 
     /// kokoro 多语言模型包（含中文音色），sherpa-onnx 官方托管
     nonisolated static let modelURL = URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_1.tar.bz2")!
+    /// 加速镜像（GitHub 反代，中国大陆网络推荐）
+    nonisolated static let mirrorURL = URL(string: "https://ghfast.top/https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_1.tar.bz2")!
     nonisolated static let modelDirName = "kokoro-multi-lang-v1_1"
     nonisolated static let approximateSizeMB = 320
 
@@ -61,12 +63,34 @@ final class VoiceModelManager {
 
     // MARK: - 下载
 
-    func startDownload() {
+    func startDownload(useMirror: Bool = false) {
         guard downloadTask == nil else { return }
         state = .downloading(progress: 0)
+        let url = useMirror ? Self.mirrorURL : Self.modelURL
         downloadTask = Task { [weak self] in
-            await self?.runDownload()
+            await self?.runDownload(from: url)
             self?.downloadTask = nil
+        }
+    }
+
+    /// 导入用户自行下载的模型包（kokoro-multi-lang-v1_1.tar.bz2）
+    func importArchive(at url: URL) {
+        guard downloadTask == nil else { return }
+        state = .extracting
+        Task { [weak self] in
+            do {
+                try FileManager.default.createDirectory(at: Self.ttsRoot, withIntermediateDirectories: true)
+                let granted = url.startAccessingSecurityScopedResource()
+                defer { if granted { url.stopAccessingSecurityScopedResource() } }
+                try await Self.extract(archive: url, to: Self.ttsRoot)
+                guard Self.isModelReady else {
+                    throw AppError.unknown("文件不完整或不是 kokoro-multi-lang-v1_1 模型包")
+                }
+                self?.state = .ready
+            } catch {
+                self?.cleanupPartial()
+                self?.state = .failed(AppError.wrap(error).userMessage)
+            }
         }
     }
 
@@ -77,7 +101,7 @@ final class VoiceModelManager {
         state = .notInstalled
     }
 
-    private func runDownload() async {
+    private func runDownload(from url: URL) async {
         let fm = FileManager.default
         let archive = Self.ttsRoot.appendingPathComponent("model-download.tar.bz2")
         do {
@@ -86,7 +110,7 @@ final class VoiceModelManager {
             let handle = try FileHandle(forWritingTo: archive)
             defer { try? handle.close() }
 
-            let (bytes, response) = try await URLSession.shared.bytes(from: Self.modelURL)
+            let (bytes, response) = try await URLSession.shared.bytes(from: url)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
                 throw AppError.network
             }
