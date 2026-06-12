@@ -21,13 +21,19 @@ Sync Impact Report
 必须可追溯到 DESIGN.md 的具体条目；与 DESIGN.md 冲突的实现一律视为缺陷。需求变更 MUST 先
 修订 DESIGN.md，再向下游制品传播。
 
-### II. 零第三方依赖（原生优先）
+### II. 零第三方依赖（原生优先，语音推理豁免）
 
 技术栈固定为 SwiftUI + SwiftData + 原生 URLSession（SSE 流式）。MUST NOT 引入任何第三方
 包依赖（SPM/CocoaPods/Carthage 均不允许）。所有能力——包括 SSE 解析、JSON 编解码、
 Keychain 访问——一律使用 Apple 原生框架实现。
 
-理由：减小供应链风险与维护负担，保证用户拿到 Xcode 工程即可直接编译。
+**唯一豁免（v1.1.0）**：本地语音合成允许引入 sherpa-onnx 推理库（Apache-2.0，以
+vendored 预编译产物形式进入仓库，不走包管理器）。豁免边界：仅限语音推理这一个组件；
+其 Swift 封装 MUST 隔离在独立服务层文件中，App 其余部分 MUST NOT 直接依赖它；
+模型文件 MUST 由用户在设置中显式触发下载，不随安装包分发。
+
+理由：减小供应链风险与维护负担，保证用户拿到 Xcode 工程即可直接编译。豁免项以
+vendored 形式提供同样满足「开箱即编译」。
 
 ### III. 密钥安全（NON-NEGOTIABLE）
 
@@ -81,4 +87,7 @@ MUST NOT 暴露给用户或角色自定义。System prompt 的组装顺序固定
 （语义化版本：原则增删为 MAJOR/MINOR，措辞澄清为 PATCH）与 Sync Impact Report。
 所有代码评审 MUST 校验对原则 II（零依赖）与 III（密钥安全）的遵从——二者为不可协商项。
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-10 | **Last Amended**: 2026-06-10
+**Version**: 1.1.0 | **Ratified**: 2026-06-10 | **Last Amended**: 2026-06-12
+
+<!-- v1.1.0 修订记录：原则 II 增加语音推理组件（sherpa-onnx）豁免条款，
+     由 specs/005-voice-tts 迭代驱动；其余原则不变。MINOR 递增。 -->

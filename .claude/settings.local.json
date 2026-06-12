@@ -10,7 +10,11 @@
       "Bash(uv tool *)",
       "Bash(git:*)",
       "Bash(sips:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(gh:*)",
+      "Bash(brew:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(ditto:*)"
     ]
   }
 }
