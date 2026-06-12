@@ -10,7 +10,14 @@ struct MessageBubbleView: View {
     var avatarFileName: String?
     /// 角色未开启心理活动时按普通文本渲染（FR-012）
     var parseThoughts: Bool = false
+    /// 是否展示 🔊 朗读按钮（语音开关，FR-404）
+    var showVoiceButton: Bool = false
+    /// 角色音色编号；-1 跟随全局
+    var characterVoiceSid: Int = -1
     var onRetry: (() -> Void)?
+
+    @State private var speech = SpeechCoordinator.shared
+    @State private var voiceModel = VoiceModelManager.shared
 
     var body: some View {
         switch message.role {
@@ -78,7 +85,40 @@ struct MessageBubbleView: View {
         VStack(alignment: .leading, spacing: 8) {
             textContent
             imageContent
-            statusFooter
+            HStack(spacing: 8) {
+                statusFooter
+                voiceButton
+            }
+        }
+    }
+
+    /// 🔊 播放/停止（FR-404）：仅角色消息、内容完成后展示
+    @ViewBuilder
+    private var voiceButton: some View {
+        if showVoiceButton, message.role == .assistant,
+           message.status == .complete || message.status == .stopped,
+           !message.text.isEmpty {
+            Button {
+                speech.toggle(
+                    messageID: message.id,
+                    text: message.text,
+                    voiceSid: characterVoiceSid >= 0 ? characterVoiceSid : nil
+                )
+            } label: {
+                if speech.synthesizingMessageID == message.id {
+                    Image(systemName: "waveform")
+                        .symbolEffect(.variableColor.iterative)
+                } else if speech.playingMessageID == message.id {
+                    Image(systemName: "stop.circle.fill")
+                } else {
+                    Image(systemName: "speaker.wave.2")
+                }
+            }
+            .buttonStyle(.plain)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .disabled(!voiceModel.isReady)
+            .help(voiceModel.isReady ? "朗读这条消息" : "请先在 设置 → 语音 中下载语音模型")
         }
     }
 

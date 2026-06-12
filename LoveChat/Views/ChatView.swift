@@ -11,6 +11,7 @@ struct ChatView: View {
     @State private var narrationDraft = ""
     @State private var editingMessage: ChatMessage?
     @State private var showConversationSettings = false
+    @AppStorage("voiceEnabled") private var voiceEnabled = false
 
     private var sortedMessages: [ChatMessage] {
         conversation.sortedMessages
@@ -60,6 +61,8 @@ struct ChatView: View {
                             characterName: conversation.character?.name ?? "角色",
                             avatarFileName: conversation.character?.avatarFileName,
                             parseThoughts: conversation.character?.showInnerThoughts ?? false,
+                            showVoiceButton: voiceEnabled,
+                            characterVoiceSid: conversation.character?.voiceSid ?? -1,
                             onRetry: message.role == .systemNotice ? {
                                 viewModel.retry(in: conversation, context: context)
                             } : nil

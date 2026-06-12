@@ -125,6 +125,14 @@ final class ChatSessionViewModel {
             // 回复完成后触发后台压缩（FR-016/017）
             if reply.status == .complete {
                 self.scheduleCompression(for: conversation, provider: provider)
+                // 自动朗读（FR-405）：未开启/未就绪时静默忽略
+                if character.autoSpeak {
+                    SpeechCoordinator.shared.autoSpeakIfEnabled(
+                        messageID: reply.id,
+                        text: reply.text,
+                        voiceSid: character.voiceSid >= 0 ? character.voiceSid : nil
+                    )
+                }
             }
         }
     }

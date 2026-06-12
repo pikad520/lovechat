@@ -7,6 +7,8 @@ struct SettingsView: View {
                 .tabItem { Label("Provider", systemImage: "server.rack") }
             CharacterListView()
                 .tabItem { Label("角色", systemImage: "person.2") }
+            VoiceSettingsView()
+                .tabItem { Label("语音", systemImage: "speaker.wave.2") }
             GeneralSettingsView()
                 .tabItem { Label("通用", systemImage: "gearshape") }
         }

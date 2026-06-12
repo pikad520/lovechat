@@ -32,6 +32,10 @@ final class CharacterCard {
     var avatarFileName: String?
     /// 图片生成风格（FR-202）；声明默认值保证旧数据轻量迁移
     var imageStyleRaw: String = ImageStyle.realistic3D.rawValue
+    /// 回复完成后自动朗读（FR-405）
+    var autoSpeak: Bool = false
+    /// 角色音色编号；-1 表示跟随全局设置（FR-405/408）
+    var voiceSid: Int = -1
     var createdAt: Date
 
     var imageStyle: ImageStyle {
@@ -78,6 +82,8 @@ struct CharacterSnapshot: Sendable {
     var showInnerThoughts: Bool
     var allowImages: Bool
     var imageStyle: ImageStyle
+    var autoSpeak: Bool
+    var voiceSid: Int
 
     init(_ card: CharacterCard) {
         name = card.name
@@ -90,5 +96,7 @@ struct CharacterSnapshot: Sendable {
         showInnerThoughts = card.showInnerThoughts
         allowImages = card.allowImages
         imageStyle = card.imageStyle
+        autoSpeak = card.autoSpeak
+        voiceSid = card.voiceSid
     }
 }

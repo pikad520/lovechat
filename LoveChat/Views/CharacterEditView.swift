@@ -59,6 +59,15 @@ struct CharacterEditView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                Section("语音") {
+                    Toggle("自动朗读回复", isOn: $character.autoSpeak)
+                    Stepper(value: $character.voiceSid, in: -1...102) {
+                        Text(character.voiceSid < 0 ? "音色：跟随全局设置" : "音色：#\(character.voiceSid)")
+                    }
+                    Text("需在 设置 → 语音 中启用语音并下载模型；音色编号可在语音设置中试听。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Section("开关") {
                     Toggle("展示心理活动", isOn: $character.showInnerThoughts)
                     Text("开启后角色会用（小括号）穿插心理活动，以特殊样式展示。")
