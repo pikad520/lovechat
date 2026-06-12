@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import AppKit
 import UniformTypeIdentifiers
 
@@ -9,6 +10,10 @@ struct VoiceSettingsView: View {
     @AppStorage("voiceSpeed") private var voiceSpeed = 1.0
     @State private var manager = VoiceModelManager.shared
     @State private var coordinator = SpeechCoordinator.shared
+    @Environment(\.modelContext) private var context
+    @Query(sort: \VoiceProviderConfig.createdAt) private var voiceProviders: [VoiceProviderConfig]
+    @State private var editingProvider: VoiceProviderConfig?
+    @State private var showNewProvider = false
     private let previewID = UUID()
 
     var body: some View {
@@ -23,6 +28,45 @@ struct VoiceSettingsView: View {
             if voiceEnabled {
                 Section("语音模型") {
                     modelStatusRow
+                }
+
+                Section {
+                    ForEach(voiceProviders) { provider in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(provider.name.isEmpty ? "（未命名）" : provider.name)
+                                Text(provider.protocolType.displayName)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture { editingProvider = provider }
+                        .contextMenu {
+                            Button("编辑") { editingProvider = provider }
+                            Button("删除", role: .destructive) {
+                                KeychainStore.delete(for: provider.id)
+                                context.delete(provider)
+                            }
+                        }
+                    }
+                    if voiceProviders.isEmpty {
+                        Text("可外接自部署的 GPT-SoVITS（克隆专属声线）或任意 OpenAI 兼容 TTS 服务；在角色编辑中绑定后生效，失败自动回退内置引擎。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    HStack {
+                        Text("外接语音服务（进阶，可选）")
+                        Spacer()
+                        Button {
+                            showNewProvider = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .buttonStyle(.borderless)
+                    }
                 }
 
                 if manager.isReady {
@@ -65,6 +109,12 @@ struct VoiceSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+        .sheet(item: $editingProvider) { provider in
+            VoiceProviderEditView(provider: provider, isNew: false)
+        }
+        .sheet(isPresented: $showNewProvider) {
+            VoiceProviderEditView(provider: VoiceProviderConfig(), isNew: true)
+        }
     }
 
     @ViewBuilder

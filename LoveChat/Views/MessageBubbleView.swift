@@ -14,6 +14,8 @@ struct MessageBubbleView: View {
     var showVoiceButton: Bool = false
     /// 角色音色编号；-1 跟随全局
     var characterVoiceSid: Int = -1
+    /// 角色绑定的外接语音服务（FR-408）
+    var externalVoice: VoiceProviderSnapshot?
     var onRetry: (() -> Void)?
 
     @State private var speech = SpeechCoordinator.shared
@@ -102,7 +104,8 @@ struct MessageBubbleView: View {
                 speech.toggle(
                     messageID: message.id,
                     text: message.text,
-                    voiceSid: characterVoiceSid >= 0 ? characterVoiceSid : nil
+                    voiceSid: characterVoiceSid >= 0 ? characterVoiceSid : nil,
+                    external: externalVoice
                 )
             } label: {
                 if speech.synthesizingMessageID == message.id {
@@ -117,8 +120,8 @@ struct MessageBubbleView: View {
             .buttonStyle(.plain)
             .font(.caption)
             .foregroundStyle(.secondary)
-            .disabled(!voiceModel.isReady)
-            .help(voiceModel.isReady ? "朗读这条消息" : "请先在 设置 → 语音 中下载语音模型")
+            .disabled(!voiceModel.isReady && externalVoice == nil)
+            .help(voiceModel.isReady || externalVoice != nil ? "朗读这条消息" : "请先在 设置 → 语音 中下载语音模型")
         }
     }
 

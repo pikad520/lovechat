@@ -63,6 +63,7 @@ struct ChatView: View {
                             parseThoughts: conversation.character?.showInnerThoughts ?? false,
                             showVoiceButton: voiceEnabled,
                             characterVoiceSid: conversation.character?.voiceSid ?? -1,
+                            externalVoice: conversation.character?.voiceProvider.map(VoiceProviderSnapshot.init),
                             onRetry: message.role == .systemNotice ? {
                                 viewModel.retry(in: conversation, context: context)
                             } : nil

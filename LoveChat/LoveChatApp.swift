@@ -12,6 +12,7 @@ struct LoveChatApp: App {
             CharacterCard.self,
             Conversation.self,
             ChatMessage.self,
+            VoiceProviderConfig.self,
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {

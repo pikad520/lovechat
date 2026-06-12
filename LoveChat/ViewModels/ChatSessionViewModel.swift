@@ -133,7 +133,8 @@ final class ChatSessionViewModel {
                     SpeechCoordinator.shared.autoSpeakIfEnabled(
                         messageID: reply.id,
                         text: reply.text,
-                        voiceSid: character.voiceSid >= 0 ? character.voiceSid : nil
+                        voiceSid: character.voiceSid >= 0 ? character.voiceSid : nil,
+                        external: character.externalVoice
                     )
                 }
             }

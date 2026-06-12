@@ -34,18 +34,18 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
     // MARK: - 入口
 
     /// 播放/停止切换（消息气泡 🔊）
-    func toggle(messageID: UUID, text: String, voiceSid: Int?) {
+    func toggle(messageID: UUID, text: String, voiceSid: Int?, external: VoiceProviderSnapshot? = nil) {
         if playingMessageID == messageID || synthesizingMessageID == messageID {
             stop()
             return
         }
-        speak(messageID: messageID, text: text, voiceSid: voiceSid)
+        speak(messageID: messageID, text: text, voiceSid: voiceSid, external: external)
     }
 
-    /// 自动朗读入口（角色回复完成时调用）；未开启/未就绪时静默忽略
-    func autoSpeakIfEnabled(messageID: UUID, text: String, voiceSid: Int?) {
-        guard isVoiceEnabled, VoiceModelManager.shared.isReady else { return }
-        speak(messageID: messageID, text: text, voiceSid: voiceSid)
+    /// 自动朗读入口（角色回复完成时调用）；未开启/不可用时静默忽略
+    func autoSpeakIfEnabled(messageID: UUID, text: String, voiceSid: Int?, external: VoiceProviderSnapshot? = nil) {
+        guard isVoiceEnabled, external != nil || VoiceModelManager.shared.isReady else { return }
+        speak(messageID: messageID, text: text, voiceSid: voiceSid, external: external)
     }
 
     func stop() {
@@ -59,9 +59,9 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
 
     // MARK: - 实现
 
-    private func speak(messageID: UUID, text: String, voiceSid: Int?) {
+    private func speak(messageID: UUID, text: String, voiceSid: Int?, external: VoiceProviderSnapshot?) {
         stop()
-        guard isVoiceEnabled, VoiceModelManager.shared.isReady else { return }
+        guard isVoiceEnabled, external != nil || VoiceModelManager.shared.isReady else { return }
 
         // 朗读跳过心理活动括号内容（FR-404）
         let spokenText = Self.speakableText(from: text)
@@ -74,11 +74,9 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
 
         speakTask = Task { [weak self] in
             do {
-                let (samples, sampleRate) = try await SpeechSynthesizer.shared
-                    .synthesize(text: spokenText, sid: sid, speed: speed)
+                let wav = try await Self.synthesizeAudio(text: spokenText, sid: sid, speed: speed, external: external)
                 try Task.checkCancellation()
                 guard let self else { return }
-                let wav = WaveEncoder.wavData(samples: samples, sampleRate: sampleRate)
                 let player = try AVAudioPlayer(data: wav)
                 player.delegate = self
                 self.player = player
@@ -93,6 +91,21 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
                 self.lastError = AppError.wrap(error).userMessage
             }
         }
+    }
+
+    /// 外接优先，失败回退内置（FR-408）；纯内置路径直接合成
+    private static func synthesizeAudio(text: String, sid: Int, speed: Float, external: VoiceProviderSnapshot?) async throws -> Data {
+        if let external {
+            do {
+                return try await ExternalVoiceClient.synthesize(text: text, provider: external)
+            } catch {
+                guard VoiceModelManager.isModelReady else { throw error }
+                // 外接不可达 → 回退内置引擎
+            }
+        }
+        let (samples, sampleRate) = try await SpeechSynthesizer.shared
+            .synthesize(text: text, sid: sid, speed: speed)
+        return WaveEncoder.wavData(samples: samples, sampleRate: sampleRate)
     }
 
     /// 过滤心理活动段，仅朗读正文

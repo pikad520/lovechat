@@ -10,6 +10,7 @@ struct CharacterEditView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \ImagineProviderConfig.createdAt) private var imagineProviders: [ImagineProviderConfig]
+    @Query(sort: \VoiceProviderConfig.createdAt) private var voiceProviders: [VoiceProviderConfig]
     @State private var isGeneratingAvatar = false
     @State private var avatarError: String?
 
@@ -61,10 +62,22 @@ struct CharacterEditView: View {
                 }
                 Section("语音") {
                     Toggle("自动朗读回复", isOn: $character.autoSpeak)
-                    Stepper(value: $character.voiceSid, in: -1...102) {
-                        Text(character.voiceSid < 0 ? "音色：跟随全局设置" : "音色：#\(character.voiceSid)")
+                    Picker("语音来源", selection: $character.voiceProvider) {
+                        Text("内置引擎").tag(nil as VoiceProviderConfig?)
+                        ForEach(voiceProviders) { provider in
+                            Text(provider.name).tag(provider as VoiceProviderConfig?)
+                        }
                     }
-                    Text("需在 设置 → 语音 中启用语音并下载模型；音色编号可在语音设置中试听。")
+                    if character.voiceProvider == nil {
+                        Stepper(value: $character.voiceSid, in: -1...102) {
+                            Text(character.voiceSid < 0 ? "音色：跟随全局设置" : "音色：#\(character.voiceSid)")
+                        }
+                    } else {
+                        Text("使用外接服务的音色；服务不可达时自动回退内置引擎。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("需在 设置 → 语音 中启用语音；内置音色编号可在语音设置中试听。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

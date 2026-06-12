@@ -36,6 +36,8 @@ final class CharacterCard {
     var autoSpeak: Bool = false
     /// 角色音色编号；-1 表示跟随全局设置（FR-405/408）
     var voiceSid: Int = -1
+    /// 绑定的外接语音服务；nil 用内置引擎（FR-408）
+    var voiceProvider: VoiceProviderConfig?
     var createdAt: Date
 
     var imageStyle: ImageStyle {
@@ -84,6 +86,7 @@ struct CharacterSnapshot: Sendable {
     var imageStyle: ImageStyle
     var autoSpeak: Bool
     var voiceSid: Int
+    var externalVoice: VoiceProviderSnapshot?
 
     init(_ card: CharacterCard) {
         name = card.name
@@ -98,5 +101,6 @@ struct CharacterSnapshot: Sendable {
         imageStyle = card.imageStyle
         autoSpeak = card.autoSpeak
         voiceSid = card.voiceSid
+        externalVoice = card.voiceProvider.map(VoiceProviderSnapshot.init)
     }
 }
