@@ -22,9 +22,9 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
         UserDefaults.standard.bool(forKey: "voiceEnabled")
     }
 
-    /// 全局默认音色编号
+    /// 全局默认音色编号（#3 为实测优选的出厂默认，与 VoiceSettingsView 保持一致）
     var globalVoiceSid: Int {
-        UserDefaults.standard.object(forKey: "voiceSid") as? Int ?? 0
+        UserDefaults.standard.object(forKey: "voiceSid") as? Int ?? 3
     }
 
     var globalSpeed: Float {

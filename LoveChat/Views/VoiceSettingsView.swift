@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 /// 语音设置（FR-402/405/406）：开关 + 模型一键下载 + 音色/语速 + 删除
 struct VoiceSettingsView: View {
     @AppStorage("voiceEnabled") private var voiceEnabled = false
-    @AppStorage("voiceSid") private var voiceSid = 0
+    @AppStorage("voiceSid") private var voiceSid = 3 // 实测 #3 中文效果出色，作为出厂默认
     @AppStorage("voiceSpeed") private var voiceSpeed = 1.0
     @State private var manager = VoiceModelManager.shared
     @State private var coordinator = SpeechCoordinator.shared
