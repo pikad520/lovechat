@@ -32,7 +32,14 @@
 - [ ] T408 朗读预处理：ThoughtParser 过滤心理活动；CharacterCard 增加 voiceID/autoSpeak
       字段（可选，轻量迁移）；自动朗读接入流式完成回调（FR-405）
 
-## Phase 4: 收尾
+## Phase 4: 外接语音服务（US4）
 
-- [ ] T409 全链路自查（降级路径/并发/零回归）+ quickstart 验证场景补充
-- [ ] T410 构建发版：编译、打包、上传新 Release，发布说明含语音功能与模型下载说明
+- [ ] T409 `VoiceProviderConfig` SwiftData 模型（名称/地址/协议类型/GPT-SoVITS 参考音频参数）+
+      设置页增删改与连通性测试（FR-407）
+- [ ] T410 `ExternalVoiceClient.swift`：OpenAI 兼容与 GPT-SoVITS api_v2 两种请求实现；
+      角色级音色绑定（内置/外接）；失败回退内置引擎（FR-408）
+
+## Phase 5: 收尾
+
+- [ ] T411 全链路自查（降级路径/并发/零回归）+ quickstart 验证场景补充
+- [ ] T412 构建发版：编译、打包、上传新 Release，发布说明含语音功能与模型下载说明

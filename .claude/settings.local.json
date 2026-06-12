@@ -14,7 +14,9 @@
       "Bash(gh:*)",
       "Bash(brew:*)",
       "Bash(xcodebuild:*)",
-      "Bash(ditto:*)"
+      "Bash(ditto:*)",
+      "Bash(curl:*)",
+      "Bash(tar:*)"
     ]
   }
 }
