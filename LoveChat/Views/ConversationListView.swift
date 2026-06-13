@@ -79,24 +79,28 @@ private struct ConversationCard: View {
     let conversation: Conversation
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(conversation.title)
-                .font(.headline)
-                .lineLimit(1)
-            HStack {
-                Text(conversation.character?.name ?? "（角色已删除）")
-                    .font(.caption)
+        HStack(alignment: .top, spacing: 10) {
+            CharacterAvatarView(fileName: conversation.character?.avatarFileName, size: 40)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(conversation.character?.name ?? "（角色已删除）")
+                        .font(.headline)
+                        .lineLimit(1)
+                    Spacer()
+                    Text(conversation.updatedAt, format: .dateTime.month().day().hour().minute())
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                Text(conversation.title)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
-                Spacer()
-                Text(conversation.updatedAt, format: .dateTime.month().day().hour().minute())
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            if let last = conversation.sortedMessages.last(where: { $0.role != .systemNotice }) {
-                Text(last.text)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(1)
+                if let last = conversation.sortedMessages.last(where: { $0.role != .systemNotice }) {
+                    Text(last.text)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(2)
+                }
             }
         }
         .padding(.vertical, 4)
