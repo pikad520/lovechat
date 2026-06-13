@@ -8,6 +8,7 @@ struct VoiceSettingsView: View {
     @AppStorage("voiceEnabled") private var voiceEnabled = false
     @AppStorage("voiceSid") private var voiceSid = 3 // 实测 #3 中文效果出色，作为出厂默认
     @AppStorage("voiceSpeed") private var voiceSpeed = 1.0
+    @AppStorage("voiceChunkedStreaming") private var chunkedStreaming = true
     @State private var manager = VoiceModelManager.shared
     @State private var coordinator = SpeechCoordinator.shared
     @Environment(\.modelContext) private var context
@@ -53,6 +54,11 @@ struct VoiceSettingsView: View {
                     }
                     if voiceProviders.isEmpty {
                         Text("可外接自部署的 GPT-SoVITS（克隆专属声线）或任意 OpenAI 兼容 TTS 服务；在角色编辑中绑定后生效，失败自动回退内置引擎。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Toggle("分句流式播放", isOn: $chunkedStreaming)
+                        Text("仅对外接服务生效。开启：长回复按句即时合成、首句更快出声；关闭：整段合成完一次性播放。引擎较慢（如 GPT-SoVITS）时建议开启。")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

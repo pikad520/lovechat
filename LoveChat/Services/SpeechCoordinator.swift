@@ -31,6 +31,14 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
         UserDefaults.standard.object(forKey: "voiceSpeed") as? Float ?? 1.0
     }
 
+    /// 外接服务分句流式播放开关（默认开，FR-501）
+    var chunkedStreamingEnabled: Bool {
+        UserDefaults.standard.object(forKey: "voiceChunkedStreaming") as? Bool ?? true
+    }
+
+    /// 分句流式专用的逐段播放器
+    private let clipPlayer = ClipPlayer()
+
     // MARK: - 入口
 
     /// 播放/停止切换（消息气泡 🔊）
@@ -53,6 +61,7 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
         speakTask = nil
         player?.stop()
         player = nil
+        clipPlayer.stop()
         playingMessageID = nil
         synthesizingMessageID = nil
     }
@@ -72,9 +81,19 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
         lastError = nil
         synthesizingMessageID = messageID
 
+        // 外接服务 + 开关开启 → 分句流式；否则整段一次性播放（FR-501）
+        if external != nil && chunkedStreamingEnabled {
+            speakChunked(messageID: messageID, text: spokenText, sid: sid, speed: speed, external: external)
+        } else {
+            speakOneShot(messageID: messageID, text: spokenText, sid: sid, speed: speed, external: external)
+        }
+    }
+
+    /// 整段合成后一次性播放（Kokoro，或外接·开关关闭）
+    private func speakOneShot(messageID: UUID, text: String, sid: Int, speed: Float, external: VoiceProviderSnapshot?) {
         speakTask = Task { [weak self] in
             do {
-                let wav = try await Self.synthesizeAudio(text: spokenText, sid: sid, speed: speed, external: external)
+                let wav = try await Self.synthesizeAudio(text: text, sid: sid, speed: speed, external: external)
                 try Task.checkCancellation()
                 guard let self else { return }
                 let player = try AVAudioPlayer(data: wav)
@@ -91,6 +110,76 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
                 self.lastError = AppError.wrap(error).userMessage
             }
         }
+    }
+
+    /// 分句流式：逐句合成、首句就绪即播，生产者后台预取后续句（FR-502/503）
+    private func speakChunked(messageID: UUID, text: String, sid: Int, speed: Float, external: VoiceProviderSnapshot?) {
+        let sentences = Self.splitSentences(text)
+        guard !sentences.isEmpty else {
+            synthesizingMessageID = nil
+            return
+        }
+        speakTask = Task { [weak self] in
+            guard let self else { return }
+            // 生产者：按序合成各句并放入缓冲（AsyncStream 默认无界，自然预取）
+            let stream = AsyncStream<Data> { continuation in
+                let producer = Task {
+                    for sentence in sentences {
+                        if Task.isCancelled { break }
+                        do {
+                            let data = try await Self.synthesizeAudio(text: sentence, sid: sid, speed: speed, external: external)
+                            continuation.yield(data)
+                        } catch {
+                            await MainActor.run { self.lastError = AppError.wrap(error).userMessage }
+                            break
+                        }
+                    }
+                    continuation.finish()
+                }
+                continuation.onTermination = { _ in producer.cancel() }
+            }
+            // 消费者：顺序播放，首段起播即切换状态
+            var started = false
+            for await data in stream {
+                if Task.isCancelled { break }
+                if !started {
+                    self.synthesizingMessageID = nil
+                    self.playingMessageID = messageID
+                    started = true
+                }
+                await self.clipPlayer.play(data)
+                if Task.isCancelled { break }
+            }
+            self.playingMessageID = nil
+            self.synthesizingMessageID = nil
+        }
+    }
+
+    /// 按句末标点切分；过短片段并入相邻句，避免碎片化（FR-504）
+    static func splitSentences(_ text: String) -> [String] {
+        let enders: Set<Character> = ["。", "！", "？", "!", "?", "…", "\n", "；", ";"]
+        var parts: [String] = []
+        var current = ""
+        for ch in text {
+            current.append(ch)
+            if enders.contains(ch) {
+                let trimmed = current.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty { parts.append(trimmed) }
+                current = ""
+            }
+        }
+        let tail = current.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !tail.isEmpty { parts.append(tail) }
+
+        var merged: [String] = []
+        for part in parts {
+            if let last = merged.last, last.count < 8 {
+                merged[merged.count - 1] = last + part
+            } else {
+                merged.append(part)
+            }
+        }
+        return merged
     }
 
     /// 外接优先，失败回退内置（FR-408）；纯内置路径直接合成
@@ -126,6 +215,45 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
         Task { @MainActor [weak self] in
             self?.playingMessageID = nil
             self?.player = nil
+        }
+    }
+}
+
+/// 分句流式专用：播放单段音频并在播完（或被停止）后返回，用于顺序衔接。
+@MainActor
+private final class ClipPlayer: NSObject, AVAudioPlayerDelegate {
+    private var player: AVAudioPlayer?
+    private var continuation: CheckedContinuation<Void, Never>?
+
+    func play(_ data: Data) async {
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            continuation = cont
+            do {
+                let p = try AVAudioPlayer(data: data)
+                p.delegate = self
+                player = p
+                p.play()
+            } catch {
+                finish()
+            }
+        }
+    }
+
+    func stop() {
+        player?.stop()
+        player = nil
+        finish()
+    }
+
+    /// 恢复等待中的 continuation（幂等：停止与自然播完都可能触发）
+    private func finish() {
+        continuation?.resume()
+        continuation = nil
+    }
+
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        Task { @MainActor [weak self] in
+            self?.finish()
         }
     }
 }
