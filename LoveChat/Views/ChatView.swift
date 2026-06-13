@@ -174,13 +174,20 @@ struct ChatView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.tint)
-                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(!canSend)
                 .help("发送")
             }
         }
     }
 
+    /// 旁白与发言二选一非空即可发送
+    private var canSend: Bool {
+        !(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && narrationDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
     private func sendDraft() {
+        guard canSend else { return }
         let text = draft
         let narration = narrationDraft
         draft = ""

@@ -15,17 +15,19 @@ final class ChatSessionViewModel {
 
     func send(text: String, narration: String = "", in conversation: Conversation, context: ModelContext) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !isStreaming else { return }
+        let trimmedNarration = narration.trimmingCharacters(in: .whitespacesAndNewlines)
+        // 旁白与发言二选一即可发送
+        guard !(trimmed.isEmpty && trimmedNarration.isEmpty), !isStreaming else { return }
 
         let userMessage = ChatMessage(role: .user, text: trimmed, status: .complete)
-        let trimmedNarration = narration.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedNarration.isEmpty {
             userMessage.narration = trimmedNarration // 随消息持久化（FR-106）
         }
         userMessage.conversation = conversation
         context.insert(userMessage)
         if conversation.sortedMessages.filter({ $0.role == .user }).count == 1 {
-            conversation.title = String(trimmed.prefix(20))
+            // 标题优先取发言，纯旁白时取旁白
+            conversation.title = String((trimmed.isEmpty ? trimmedNarration : trimmed).prefix(20))
         }
         conversation.updatedAt = Date()
 

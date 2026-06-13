@@ -28,10 +28,13 @@ struct MessageBubbleView: View {
                 Spacer(minLength: 60)
                 VStack(alignment: .trailing, spacing: 4) {
                     narrationContent
-                    bubbleContent
-                        .padding(10)
-                        .background(.tint.opacity(0.85), in: RoundedRectangle(cornerRadius: 12))
-                        .foregroundStyle(.white)
+                    // 纯旁白（无发言）时不显示空气泡
+                    if !message.text.isEmpty {
+                        bubbleContent
+                            .padding(10)
+                            .background(.tint.opacity(0.85), in: RoundedRectangle(cornerRadius: 12))
+                            .foregroundStyle(.white)
+                    }
                 }
             }
         case .assistant:

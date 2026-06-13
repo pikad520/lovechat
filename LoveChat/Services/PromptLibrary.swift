@@ -70,17 +70,22 @@ enum PromptLibrary {
 
     // MARK: - 旁白合并（FR-105，标记格式硬编码）
 
-    /// 旁白非空时把旁白与用户发言合并为一条带标记的用户消息；
-    /// 为空时原样返回用户文本（零回归，SC-102）。
+    /// 旁白与用户发言二选一或都填：
+    /// - 只填发言 → 原样返回发言（零回归，SC-102）
+    /// - 只填旁白 → 仅旁白块，不带空的发言块
+    /// - 都填 → 旁白块 + 发言块
     static func composeUserTurn(narration: String?, text: String) -> String {
-        guard let narration = narration?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !narration.isEmpty
-        else { return text }
+        let narr = narration?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if narr.isEmpty { return body }
+        if body.isEmpty {
+            return "【旁白｜场景与情节描述，不是用户对你说的话】\n\(narr)"
+        }
         return """
         【旁白｜场景与情节描述，不是用户对你说的话】
-        \(narration)
+        \(narr)
         【用户发言】
-        \(text)
+        \(body)
         """
     }
 
