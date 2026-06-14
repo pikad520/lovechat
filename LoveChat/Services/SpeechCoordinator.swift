@@ -42,18 +42,18 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
     // MARK: - 入口
 
     /// 播放/停止切换（消息气泡 🔊）
-    func toggle(messageID: UUID, text: String, voiceSid: Int?, external: VoiceProviderSnapshot? = nil) {
+    func toggle(messageID: UUID, text: String, voiceSid: Int?, external: VoiceProviderSnapshot? = nil, language: CharacterLanguage = .chinese) {
         if playingMessageID == messageID || synthesizingMessageID == messageID {
             stop()
             return
         }
-        speak(messageID: messageID, text: text, voiceSid: voiceSid, external: external)
+        speak(messageID: messageID, text: text, voiceSid: voiceSid, external: external, language: language)
     }
 
     /// 自动朗读入口（角色回复完成时调用）；未开启/不可用时静默忽略
-    func autoSpeakIfEnabled(messageID: UUID, text: String, voiceSid: Int?, external: VoiceProviderSnapshot? = nil) {
+    func autoSpeakIfEnabled(messageID: UUID, text: String, voiceSid: Int?, external: VoiceProviderSnapshot? = nil, language: CharacterLanguage = .chinese) {
         guard isVoiceEnabled, external != nil || VoiceModelManager.shared.isReady else { return }
-        speak(messageID: messageID, text: text, voiceSid: voiceSid, external: external)
+        speak(messageID: messageID, text: text, voiceSid: voiceSid, external: external, language: language)
     }
 
     func stop() {
@@ -68,7 +68,7 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
 
     // MARK: - 实现
 
-    private func speak(messageID: UUID, text: String, voiceSid: Int?, external: VoiceProviderSnapshot?) {
+    private func speak(messageID: UUID, text: String, voiceSid: Int?, external: VoiceProviderSnapshot?, language: CharacterLanguage) {
         stop()
         guard isVoiceEnabled, external != nil || VoiceModelManager.shared.isReady else { return }
 
@@ -83,17 +83,17 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
 
         // 外接服务 + 开关开启 → 分句流式；否则整段一次性播放（FR-501）
         if external != nil && chunkedStreamingEnabled {
-            speakChunked(messageID: messageID, text: spokenText, sid: sid, speed: speed, external: external)
+            speakChunked(messageID: messageID, text: spokenText, sid: sid, speed: speed, external: external, language: language)
         } else {
-            speakOneShot(messageID: messageID, text: spokenText, sid: sid, speed: speed, external: external)
+            speakOneShot(messageID: messageID, text: spokenText, sid: sid, speed: speed, external: external, language: language)
         }
     }
 
     /// 整段合成后一次性播放（Kokoro，或外接·开关关闭）
-    private func speakOneShot(messageID: UUID, text: String, sid: Int, speed: Float, external: VoiceProviderSnapshot?) {
+    private func speakOneShot(messageID: UUID, text: String, sid: Int, speed: Float, external: VoiceProviderSnapshot?, language: CharacterLanguage) {
         speakTask = Task { [weak self] in
             do {
-                let wav = try await Self.synthesizeAudio(text: text, sid: sid, speed: speed, external: external)
+                let wav = try await Self.synthesizeAudio(text: text, sid: sid, speed: speed, external: external, language: language)
                 try Task.checkCancellation()
                 guard let self else { return }
                 let player = try AVAudioPlayer(data: wav)
@@ -113,7 +113,7 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
     }
 
     /// 分句流式：逐句合成、首句就绪即播，生产者后台预取后续句（FR-502/503）
-    private func speakChunked(messageID: UUID, text: String, sid: Int, speed: Float, external: VoiceProviderSnapshot?) {
+    private func speakChunked(messageID: UUID, text: String, sid: Int, speed: Float, external: VoiceProviderSnapshot?, language: CharacterLanguage) {
         let sentences = Self.splitSentences(text)
         guard !sentences.isEmpty else {
             synthesizingMessageID = nil
@@ -127,7 +127,7 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
                     for sentence in sentences {
                         if Task.isCancelled { break }
                         do {
-                            let data = try await Self.synthesizeAudio(text: sentence, sid: sid, speed: speed, external: external)
+                            let data = try await Self.synthesizeAudio(text: sentence, sid: sid, speed: speed, external: external, language: language)
                             continuation.yield(data)
                         } catch {
                             await MainActor.run { self.lastError = AppError.wrap(error).userMessage }
@@ -183,17 +183,17 @@ final class SpeechCoordinator: NSObject, AVAudioPlayerDelegate {
     }
 
     /// 外接优先，失败回退内置（FR-408）；纯内置路径直接合成
-    private static func synthesizeAudio(text: String, sid: Int, speed: Float, external: VoiceProviderSnapshot?) async throws -> Data {
+    private static func synthesizeAudio(text: String, sid: Int, speed: Float, external: VoiceProviderSnapshot?, language: CharacterLanguage) async throws -> Data {
         if let external {
             do {
-                return try await ExternalVoiceClient.synthesize(text: text, provider: external)
+                return try await ExternalVoiceClient.synthesize(text: text, provider: external, langCode: language.langCode)
             } catch {
                 guard VoiceModelManager.isModelReady else { throw error }
                 // 外接不可达 → 回退内置引擎
             }
         }
         let (samples, sampleRate) = try await SpeechSynthesizer.shared
-            .synthesize(text: text, sid: sid, speed: speed)
+            .synthesize(text: text, sid: sid, speed: speed, lang: language.langCode)
         return WaveEncoder.wavData(samples: samples, sampleRate: sampleRate)
     }
 

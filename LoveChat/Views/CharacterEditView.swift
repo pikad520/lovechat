@@ -28,6 +28,15 @@ struct CharacterEditView: View {
                     TextField("名称（必填）", text: $character.name)
                     TextField("性别", text: $character.gender)
                     TextField("对用户的称呼", text: $character.userAddressing, prompt: Text("如 亲爱的"))
+                    Picker("语种", selection: $character.language) {
+                        ForEach(CharacterLanguage.allCases, id: \.self) { lang in
+                            Text(lang.displayName).tag(lang)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    Text("控制角色回复、心理活动与语音的语言。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 Section("人设") {
                     VStack(alignment: .leading) {

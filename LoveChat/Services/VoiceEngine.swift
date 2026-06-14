@@ -6,6 +6,8 @@ actor SpeechSynthesizer {
     static let shared = SpeechSynthesizer()
 
     private var tts: OpaquePointer?
+    /// 当前已加载模型的语种提示；语种变化时重载
+    private var loadedLang: String?
 
     /// 保存传给 C 配置的字符串副本，生命周期随引擎
     private var configStrings: [UnsafeMutablePointer<CChar>] = []
@@ -23,9 +25,10 @@ actor SpeechSynthesizer {
         return Int(SherpaOnnxOfflineTtsNumSpeakers(tts))
     }
 
-    /// 加载模型（幂等）。失败抛错，由调用方降级处理（宪法 V）。
-    func ensureLoaded() throws {
-        guard tts == nil else { return }
+    /// 加载模型（幂等）；语种变化时重载。失败抛错，由调用方降级处理（宪法 V）。
+    func ensureLoaded(lang: String) throws {
+        if tts != nil, loadedLang == lang { return }
+        if tts != nil { unload() }
         let dir = VoiceModelManager.modelDir
         let fm = FileManager.default
 
@@ -51,6 +54,7 @@ actor SpeechSynthesizer {
         if !lexicons.isEmpty {
             config.model.kokoro.lexicon = keep(lexicons.joined(separator: ","))
         }
+        config.model.kokoro.lang = keep(lang)
         config.model.kokoro.length_scale = 1.0
         config.model.num_threads = 2
         config.model.provider = keep("cpu")
@@ -67,11 +71,12 @@ actor SpeechSynthesizer {
             throw AppError.unknown("语音模型加载失败，请尝试重新下载模型")
         }
         tts = handle
+        loadedLang = lang
     }
 
     /// 文本 → 单声道 PCM 浮点采样
-    func synthesize(text: String, sid: Int, speed: Float) throws -> (samples: [Float], sampleRate: Int) {
-        try ensureLoaded()
+    func synthesize(text: String, sid: Int, speed: Float, lang: String) throws -> (samples: [Float], sampleRate: Int) {
+        try ensureLoaded(lang: lang)
         guard let tts else {
             throw AppError.unknown("语音引擎未就绪")
         }
@@ -94,6 +99,7 @@ actor SpeechSynthesizer {
             SherpaOnnxDestroyOfflineTts(tts)
         }
         tts = nil
+        loadedLang = nil
         configStrings.forEach { free($0) }
         configStrings.removeAll()
     }

@@ -125,6 +125,8 @@ enum PromptLibrary {
             sections.append(innerThoughtsInstruction)
         }
 
+        sections.append(character.language.promptDirective)
+
         if !summary.isEmpty {
             sections.append("【过往剧情摘要】\n\(summary)")
         }

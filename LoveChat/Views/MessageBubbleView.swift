@@ -16,6 +16,8 @@ struct MessageBubbleView: View {
     var characterVoiceSid: Int = -1
     /// 角色绑定的外接语音服务（FR-408）
     var externalVoice: VoiceProviderSnapshot?
+    /// 角色语种（控制语音合成语言）
+    var characterLanguage: CharacterLanguage = .chinese
     var onRetry: (() -> Void)?
 
     @State private var speech = SpeechCoordinator.shared
@@ -108,7 +110,8 @@ struct MessageBubbleView: View {
                     messageID: message.id,
                     text: message.text,
                     voiceSid: characterVoiceSid >= 0 ? characterVoiceSid : nil,
-                    external: externalVoice
+                    external: externalVoice,
+                    language: characterLanguage
                 )
             } label: {
                 if speech.synthesizingMessageID == message.id {

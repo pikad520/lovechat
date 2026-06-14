@@ -1,6 +1,37 @@
 import Foundation
 import SwiftData
 
+/// 角色语种：控制回复/心理活动/语音的语言
+enum CharacterLanguage: String, Codable, CaseIterable, Sendable {
+    case chinese
+    case japanese
+
+    var displayName: String {
+        switch self {
+        case .chinese: "中文"
+        case .japanese: "日语"
+        }
+    }
+
+    /// GPT-SoVITS text_lang / Kokoro lang 提示
+    var langCode: String {
+        switch self {
+        case .chinese: "zh"
+        case .japanese: "ja"
+        }
+    }
+
+    /// 注入 system prompt 的语言指令（硬编码，宪法 VI）
+    var promptDirective: String {
+        switch self {
+        case .chinese:
+            "【语言】请始终使用简体中文回复，包括括号内的心理活动。"
+        case .japanese:
+            "【言語】必ず日本語で応答してください。括弧内の心理描写も日本語で書いてください。"
+        }
+    }
+}
+
 /// 图片生成预置风格（FR-202）：仅三选一，提示词片段硬编码于 PromptLibrary
 enum ImageStyle: String, Codable, CaseIterable, Sendable {
     case realistic3D
@@ -38,7 +69,14 @@ final class CharacterCard {
     var voiceSid: Int = -1
     /// 绑定的外接语音服务；nil 用内置引擎（FR-408）
     var voiceProvider: VoiceProviderConfig?
+    /// 回复/心理活动/语音的语种；声明默认值保证旧数据轻量迁移
+    var languageRaw: String = CharacterLanguage.chinese.rawValue
     var createdAt: Date
+
+    var language: CharacterLanguage {
+        get { CharacterLanguage(rawValue: languageRaw) ?? .chinese }
+        set { languageRaw = newValue.rawValue }
+    }
 
     var imageStyle: ImageStyle {
         get { ImageStyle(rawValue: imageStyleRaw) ?? .realistic3D }
@@ -87,6 +125,7 @@ struct CharacterSnapshot: Sendable {
     var autoSpeak: Bool
     var voiceSid: Int
     var externalVoice: VoiceProviderSnapshot?
+    var language: CharacterLanguage
 
     init(_ card: CharacterCard) {
         name = card.name
@@ -102,5 +141,6 @@ struct CharacterSnapshot: Sendable {
         autoSpeak = card.autoSpeak
         voiceSid = card.voiceSid
         externalVoice = card.voiceProvider.map(VoiceProviderSnapshot.init)
+        language = card.language
     }
 }

@@ -4,12 +4,12 @@ import Foundation
 /// 任何失败抛错，由 SpeechCoordinator 决定回退内置引擎（FR-408）。
 enum ExternalVoiceClient {
 
-    static func synthesize(text: String, provider: VoiceProviderSnapshot) async throws -> Data {
+    static func synthesize(text: String, provider: VoiceProviderSnapshot, langCode: String = "zh") async throws -> Data {
         switch provider.protocolType {
         case .openAICompatible:
             try await synthesizeOpenAI(text: text, provider: provider)
         case .gptSoVITS:
-            try await synthesizeGPTSoVITS(text: text, provider: provider)
+            try await synthesizeGPTSoVITS(text: text, provider: provider, langCode: langCode)
         }
     }
 
@@ -44,7 +44,7 @@ enum ExternalVoiceClient {
 
     // MARK: - GPT-SoVITS api_v2 /tts
 
-    private static func synthesizeGPTSoVITS(text: String, provider: VoiceProviderSnapshot) async throws -> Data {
+    private static func synthesizeGPTSoVITS(text: String, provider: VoiceProviderSnapshot, langCode: String) async throws -> Data {
         // api_v2 的 /tts 端点直接挂在根路径，不走 /v1 规范化
         var base = provider.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
         while base.hasSuffix("/") { base = String(base.dropLast()) }
@@ -53,8 +53,8 @@ enum ExternalVoiceClient {
         }
         var body: [String: Any] = [
             "text": text,
-            "text_lang": "zh",
-            "prompt_lang": "zh",
+            "text_lang": langCode,
+            "prompt_lang": langCode,
             "media_type": "wav",
             "streaming_mode": false,
         ]

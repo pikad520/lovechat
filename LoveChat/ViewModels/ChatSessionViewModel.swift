@@ -136,7 +136,8 @@ final class ChatSessionViewModel {
                         messageID: reply.id,
                         text: reply.text,
                         voiceSid: character.voiceSid >= 0 ? character.voiceSid : nil,
-                        external: character.externalVoice
+                        external: character.externalVoice,
+                        language: character.language
                     )
                 }
             }
